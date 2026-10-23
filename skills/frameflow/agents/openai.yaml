@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frameflow"
+  short_description: "从视频逐帧素材编排滚动叙事网页样稿"
+  default_prompt: "Use $frameflow to turn my video and copy into an editable scroll-story prototype with desktop and mobile layouts."

@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "project": {
+    "name": "New scroll story",
+    "defaultLanguage": "zh-CN",
+    "languages": ["zh-CN", "en"],
+    "canvas": {
+      "desktop": { "width": 1440, "height": 900 },
+      "mobile": { "width": 390, "height": 844 }
+    }
+  },
+  "theme": {
+    "background": "#f1e5cf",
+    "ink": "#361529",
+    "accent": "#f41f63",
+    "secondary": "#e7a52b",
+    "headingFont": "Your licensed serif font",
+    "bodyFont": "Your licensed sans font",
+    "paperTexture": "media/paper.webp"
+  },
+  "navigation": {
+    "order": ["home", "story", "method", "join"],
+    "wheelThreshold": 55,
+    "swipeThreshold": 70,
+    "preload": "current-and-next",
+    "showScrollHint": true
+  },
+  "scenes": [
+    {
+      "id": "home",
+      "type": "home",
+      "background": { "color": "#f1e5cf", "texture": "media/paper.webp" },
+      "copy": {
+        "zh-CN": { "title": "品牌主张", "body": "一句简短介绍。", "action": "了解我们" },
+        "en": { "title": "Brand statement", "body": "A short introduction.", "action": "About us" }
+      },
+      "hotspots": [
+        { "layerId": "figure-one", "targetSceneId": "story" },
+        { "layerId": "figure-two", "targetSceneId": "method" },
+        { "layerId": "join-button", "targetSceneId": "join" }
+      ],
+      "layers": [
+        {
+          "id": "figure-one",
+          "kind": "image",
+          "media": "media/figure-one-poster.webp",
+          "blendMode": "multiply",
+          "desktop": { "x": 160, "y": 450, "width": 430, "height": 380, "zIndex": 3 },
+          "mobile": { "x": 35, "y": 390, "width": 220, "height": 280, "zIndex": 3 }
+        },
+        {
+          "id": "figure-two",
+          "kind": "image",
+          "media": "media/figure-two-poster.webp",
+          "blendMode": "multiply",
+          "desktop": { "x": 620, "y": 260, "width": 300, "height": 570, "zIndex": 4 },
+          "mobile": { "x": 205, "y": 280, "width": 150, "height": 430, "zIndex": 4 }
+        }
+      ]
+    },
+    {
+      "id": "story",
+      "type": "chapter",
+      "background": { "color": "#f41f63", "texture": "media/pink-paper.webp" },
+      "copy": {
+        "zh-CN": { "title": "我们是谁", "body": "在这里填写正文。", "action": "继续下滑" },
+        "en": { "title": "Who we are", "body": "Add chapter copy here.", "action": "Scroll to continue" }
+      },
+      "transition": { "preset": "diagonal-wave", "from": "bottom-left", "durationMs": 1200, "easing": "easeInOut" },
+      "character": {
+        "poster": "media/figure-one-poster.webp",
+        "frames": { "pattern": "media/figure-one/frame_{000}.webp", "count": 36, "fps": 18, "startFrame": 0, "width": 600, "height": 600 },
+        "blendMode": "multiply",
+        "desktop": { "x": 60, "y": 200, "width": 600, "height": 600, "zIndex": 2 },
+        "mobile": { "x": -25, "y": 300, "width": 410, "height": 410, "zIndex": 2 },
+        "startAtMs": 0
+      },
+      "textTrack": { "startAtMs": 900, "staggerMs": 180, "durationMs": 400 }
+    },
+    {
+      "id": "method",
+      "type": "chapter",
+      "background": { "color": "#e7a52b", "texture": "media/yellow-paper.webp" },
+      "copy": {
+        "zh-CN": { "title": "方法", "body": "在这里填写正文。", "action": "继续下滑" },
+        "en": { "title": "Approach", "body": "Add chapter copy here.", "action": "Scroll to continue" }
+      },
+      "transition": { "preset": "radial-circle", "origin": { "desktop": [0.35, 0.5], "mobile": [0.5, 0.5] }, "durationMs": 1400, "easing": "easeOut" },
+      "character": {
+        "poster": "media/figure-two-poster.webp",
+        "frames": { "pattern": "media/figure-two/frame_{000}.webp", "count": 24, "fps": 12, "startFrame": 0, "width": 600, "height": 900 },
+        "blendMode": "multiply",
+        "desktop": { "x": 130, "y": 100, "width": 450, "height": 675, "zIndex": 2 },
+        "mobile": { "x": 10, "y": 270, "width": 260, "height": 390, "zIndex": 2 },
+        "startAtMs": 0
+      },
+      "textTrack": { "startAtMs": 1200, "staggerMs": 200, "durationMs": 450 }
+    },
+    {
+      "id": "join",
+      "type": "chapter",
+      "background": { "color": "#f1e5cf", "texture": "media/paper.webp" },
+      "copy": {
+        "zh-CN": { "title": "加入我们", "body": "在这里填写联系信息。", "action": "发送邮件" },
+        "en": { "title": "Join us", "body": "Add contact information here.", "action": "Email us" }
+      },
+      "transition": { "preset": "slide", "direction": "down", "durationMs": 900, "easing": "easeInOut" },
+      "character": {
+        "poster": "media/figure-three-poster.webp",
+        "frames": { "pattern": "media/figure-three/frame_{000}.webp", "count": 48, "fps": 20, "startFrame": 0, "width": 500, "height": 800 },
+        "blendMode": "multiply",
+        "desktop": { "x": 100, "y": 80, "width": 500, "height": 800, "zIndex": 2 },
+        "mobile": { "x": -20, "y": 220, "width": 330, "height": 528, "zIndex": 2 },
+        "startAtMs": 900
+      },
+      "textTrack": { "startAtMs": 900, "staggerMs": 220, "durationMs": 450 }
+    }
+  ]
+}
