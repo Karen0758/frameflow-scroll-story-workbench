@@ -80,9 +80,11 @@ a{color:inherit}
 @keyframes copy-in{from{opacity:0;transform:translateY(12px)}
 to{opacity:1;transform:translateY(0)}
 }
-.preview-controls{position:absolute;z-index:20;right:12px;bottom:12px;display:flex;gap:6px;align-items:center;padding:4px;border-radius:40px;background:#1f1e1dc9;color:#fff;font-size:10px}
+.preview-controls{position:absolute;z-index:20;left:12px;bottom:12px;display:flex;gap:6px;align-items:center;padding:4px;border-radius:40px;background:#1f1e1dc9;color:#fff;font-size:10px}
 .preview-controls button{color:#fff;background:#ffffff2c;border:0;border-radius:50%;width:26px;height:26px}
 .preview-controls span{min-width:34px;text-align:center}
+.stage-scroll-hint{position:absolute;z-index:20;right:3%;bottom:4%;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:5px;color:#3d1730;font-family:Georgia,'Songti SC',serif;font-size:clamp(9px,1.2vw,16px);text-shadow:0 1px 8px #fff7}
+.stage-scroll-hint svg{width:20px;height:28px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .stage-shell.mobile .scene-copy h2{font-size:clamp(24px,7vw,38px)}
 .stage-shell.mobile .scene-copy p{font-size:clamp(10px,2.8vw,13px);line-height:1.6}
 .stage-shell.mobile .scene-kicker{font-size:9px}

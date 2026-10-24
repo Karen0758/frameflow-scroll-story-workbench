@@ -4,6 +4,7 @@ import { clamp, dimensions, makeScene, newProject, type AssetMeta, type Box, typ
 import { extractVideoFrames, readVideoMetadata, storeImage, type ExtractOptions } from './media';
 import { deleteBlob, getBlob, loadProject, saveProject } from './storage';
 import { exportBundle, importBundle } from './bundle';
+import { exportStaticSite } from './export/site';
 
 type Panel = 'scene' | 'theme' | 'media';
 type UploadKind = 'frames' | 'texture';
@@ -161,6 +162,14 @@ export default function App() {
     try { download(await exportBundle(project), `${project.name.replace(/[^\w\u4e00-\u9fa5-]+/g, '-') || 'frameflow'}.frameflow`); setMessage('项目与素材已导出。'); }
     catch (error) { setMessage(error instanceof Error ? error.message : '导出失败。'); }
   }
+  async function exportWebsite() {
+    try {
+      setMessage('正在打包网页和当前场景素材…');
+      const blob = await exportStaticSite(project);
+      download(blob, `${project.name.replace(/[^\w\u4e00-\u9fa5-]+/g, '-') || 'frameflow'}-website.zip`);
+      setMessage(`网页已导出（${(blob.size / 1048576).toFixed(1)} MB），解压后按 README.txt 预览或部署。`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : '网页导出失败。'); }
+  }
   async function handleImport(file: File | undefined) {
     if (!file) return;
     try {
@@ -181,7 +190,7 @@ export default function App() {
   const timelineEnd = Math.max(selected.transition.durationMs, selected.characterStartMs + selected.frameAssetIds.length / selected.fps * 1000, selected.textStartMs + 600, 1800);
 
   return <div className="app-shell">
-    <header className="app-header"><div className="brand-mark">F<span>↝</span></div><div className="brand-copy"><strong>Frameflow</strong><small>逐帧叙事工作台 <span>LOCAL BETA</span></small></div><div className="header-divider" /><label className="project-name-label">项目名称<input aria-label="项目名称" value={project.name} onChange={event => setProject(current => ({ ...current, name: event.target.value }))} /></label><div className="header-spacer" /><span className="save-state">● {saveState}</span><button className="ghost-button" onClick={newBlankProject}>新项目</button><button className="ghost-button" onClick={() => importInput.current?.click()}>导入项目包</button><button className="primary-button" onClick={() => void exportProject()}>导出项目 ↗</button></header>
+    <header className="app-header"><div className="brand-mark">F<span>↝</span></div><div className="brand-copy"><strong>Frameflow</strong><small>逐帧叙事工作台 <span>LOCAL BETA</span></small></div><div className="header-divider" /><label className="project-name-label">项目名称<input aria-label="项目名称" value={project.name} onChange={event => setProject(current => ({ ...current, name: event.target.value }))} /></label><div className="header-spacer" /><span className="save-state">● {saveState}</span><button className="ghost-button" onClick={newBlankProject}>新项目</button><button className="ghost-button" onClick={() => importInput.current?.click()}>导入项目包</button><button className="ghost-button" onClick={() => void exportProject()}>导出可编辑项目</button><button className="primary-button" onClick={() => void exportWebsite()}>导出网页 ZIP ↗</button></header>
     <div className="workspace">
       <aside className="scene-sidebar"><div className="sidebar-section-title"><span>场景 / SCENES</span><button onClick={addScene} aria-label="添加场景">＋</button></div><div className="scene-list">{project.scenes.map((scene, index) => <button key={scene.id} className={`scene-item ${selected.id === scene.id ? 'selected' : ''}`} onClick={() => { selectScene(scene.id); setPlaying(false); }}><span className="scene-no">{String(index + 1).padStart(2, '0')}</span><span className="scene-swatch" style={{ background: scene.background }} /><span className="scene-list-name"><strong>{scene.name}</strong><small>{scene.title}</small></span><span className="scene-arrow">↗</span></button>)}</div><button className="add-scene" onClick={addScene}>＋ 添加新场景</button><div className="sidebar-bottom"><span className="eyebrow">FRAMEFLOW METHOD</span><p>主体、纹理和文字分层。先定画幅与影子，再定过场和时间轴。</p><small>制作流程：docs/PROCESS_TEMPLATE.md</small></div></aside>
       <main className="center-column"><div className="canvas-toolbar"><div className="toolbar-group"><span className="eyebrow">CANVAS</span><button className={device === 'desktop' ? 'active' : ''} onClick={() => setDevice('desktop')}>▣ 电脑</button><button className={device === 'mobile' ? 'active' : ''} onClick={() => setDevice('mobile')}>▯ 手机</button></div><div className="toolbar-group"><span className="eyebrow">PREVIEW</span><button className={playing ? 'preview-active' : ''} onClick={() => { setPlaying(value => !value); setScrubMs(0); }}>{playing ? '■ 停止预览' : '▶ 播放交互'}</button></div></div><div className="canvas-area"><Stage project={project} selectedId={selected.id} device={device} urls={urls} playing={playing} scrubMs={scrubMs} onSelect={selectScene} onBox={setBox} /></div><div className="timeline"><div className="timeline-head"><div><span className="eyebrow">TIMELINE</span><strong>{selected.name}</strong></div><span>拖动时间线查看人物与文字的出现顺序</span><b>{(scrubMs / 1000).toFixed(2)} s</b></div><input aria-label="时间轴预览" type="range" min={0} max={timelineEnd} step={20} value={scrubMs} disabled={playing} onChange={event => setScrubMs(Number(event.target.value))} /><div className="timeline-tracks"><div><label>背景过场</label><span style={{ width: `${Math.min(100, selected.transition.durationMs / timelineEnd * 100)}%`, background: selected.background }} /><em>{(selected.transition.durationMs / 1000).toFixed(1)}s</em></div><div><label>人物逐帧</label><span style={{ marginLeft: `${selected.characterStartMs / timelineEnd * 100}%`, width: `${Math.min(100, selected.frameAssetIds.length / selected.fps * 1000 / timelineEnd * 100)}%`, background: '#a69d8b' }} /><em>{selected.frameAssetIds.length || '未上传'} 帧</em></div><div><label>文字出现</label><span style={{ marginLeft: `${selected.textStartMs / timelineEnd * 100}%`, width: `${Math.min(100, 600 / timelineEnd * 100)}%`, background: '#ac5277' }} /><em>{(selected.textStartMs / 1000).toFixed(1)}s 起</em></div></div></div></main>

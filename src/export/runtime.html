@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Frameflow Story</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{width:100%;height:100%;margin:0;overflow:hidden}
+    body{background:#eee6d8;-webkit-font-smoothing:antialiased}
+    #story{position:fixed;inset:0;overflow:hidden;touch-action:pan-y}
+    .scene{position:absolute;inset:0;overflow:hidden;background:var(--background);color:var(--ink)}
+    .scene.incoming{z-index:2}
+    .texture{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;mix-blend-mode:multiply;opacity:.48;pointer-events:none}
+    .actor{position:absolute;z-index:2;object-fit:contain;user-select:none;pointer-events:none}
+    .copy{position:absolute;z-index:3;max-height:calc(100% - 4vh);overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;white-space:pre-line;opacity:0;transform:translateY(12px);transition:opacity .55s ease,transform .55s ease;padding:0 4px 12px 0}
+    .copy.visible{opacity:1;transform:none}
+    .copy h1{font-size:clamp(32px,5vw,82px);line-height:1.16;font-weight:500;letter-spacing:-.025em;margin:0 0 .55em}
+    .copy p{font:clamp(14px,1.32vw,21px)/1.75 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;margin:0;white-space:pre-line}
+    .serif .copy h1{font-family:Georgia,"Songti SC","Noto Serif CJK SC",serif}
+    .sans .copy h1{font-family:Arial,"PingFang SC",sans-serif}
+    .scroll-hint{position:fixed;right:clamp(22px,3vw,52px);bottom:calc(env(safe-area-inset-bottom) + clamp(24px,4vh,48px));z-index:10;color:var(--hint-color,#3d1730);display:flex;flex-direction:column;align-items:center;gap:9px;pointer-events:none;transition:opacity .3s ease;font-family:Georgia,"Songti SC",serif;font-size:clamp(14px,1.1vw,18px);letter-spacing:.08em;text-shadow:0 1px 8px #fff5}
+    .scroll-hint svg{width:24px;height:32px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;animation:hint-drift 1.8s ease-in-out infinite}
+    .scroll-hint.hidden{opacity:0}
+    @keyframes hint-drift{50%{transform:translateY(5px)}}
+    @media(max-width:700px){.copy h1{font-size:clamp(28px,8vw,44px)}.copy p{font-size:clamp(13px,3.6vw,16px);line-height:1.65}.scroll-hint{right:18px;bottom:calc(env(safe-area-inset-bottom) + 24px);font-size:14px}}
+    @media(prefers-reduced-motion:reduce){.scroll-hint svg{animation:none}.copy{transition:none}}
+  </style>
+</head>
+<body>
+  <main id="story" aria-label="滚动叙事页面"></main>
+  <div id="scroll-hint" class="scroll-hint" role="note"><span>继续下滑</span><svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 2v25M4 19l8 8 8-8"/></svg></div>
+  <script id="story-data" type="application/json">__FRAMEFLOW_PROJECT_JSON__</script>
+  <script>
+  (() => {
+    'use strict';
+    const data = JSON.parse(document.getElementById('story-data').textContent);
+    const project = data.project;
+    const media = data.media;
+    const stage = document.getElementById('story');
+    const hint = document.getElementById('scroll-hint');
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    const imageCache = new Map();
+    const loadingScenes = new Set();
+    let index = 0;
+    let active = null;
+    let incoming = null;
+    let transition = null;
+    let startTime = performance.now();
+    let lastFrame = -1;
+    let lastIncomingFrame = -1;
+    let busyUntil = 0;
+    let touchY = null;
+
+    document.title = project.name || 'Frameflow Story';
+    document.documentElement.lang = /[\u4e00-\u9fff]/.test(project.scenes.map(s => s.title + s.body).join('')) ? 'zh-CN' : 'en';
+    stage.className = project.theme.font;
+
+    function sceneMedia(id) { return id && media[id] ? media[id] : ''; }
+    function warm(path) {
+      if (!path || imageCache.has(path)) return;
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = path;
+      imageCache.set(path, img);
+    }
+    function preloadScene(sceneIndex) {
+      if (sceneIndex < 0 || sceneIndex >= project.scenes.length || loadingScenes.has(sceneIndex)) return;
+      loadingScenes.add(sceneIndex);
+      const scene = project.scenes[sceneIndex];
+      warm(sceneMedia(scene.textureAssetId));
+      let cursor = 0;
+      function batch() {
+        for (let count = 0; count < 4 && cursor < scene.frameAssetIds.length; count++, cursor++) warm(sceneMedia(scene.frameAssetIds[cursor]));
+        if (cursor < scene.frameAssetIds.length) setTimeout(batch, 35);
+      }
+      batch();
+    }
+    function layoutBox(element, box, dimensions, includeHeight = true) {
+      element.style.left = `${box.x / dimensions.width * 100}%`;
+      element.style.top = `${box.y / dimensions.height * 100}%`;
+      element.style.width = `${box.width / dimensions.width * 100}%`;
+      if (includeHeight) element.style.height = `${box.height / dimensions.height * 100}%`;
+    }
+    function createScene(sceneIndex) {
+      const scene = project.scenes[sceneIndex];
+      const mobile = matchMedia('(max-width: 700px)').matches;
+      const dims = mobile ? {width:390,height:844} : {width:1440,height:900};
+      const layout = scene.layouts[mobile ? 'mobile' : 'desktop'];
+      const root = document.createElement('section');
+      root.className = 'scene';
+      root.style.setProperty('--background', scene.background);
+      root.style.setProperty('--ink', project.theme.ink);
+      root.setAttribute('aria-label', scene.name || scene.title);
+      const texturePath = sceneMedia(scene.textureAssetId);
+      if (texturePath) {
+        const texture = document.createElement('img');
+        texture.className = 'texture'; texture.src = texturePath; texture.alt = '';
+        root.append(texture);
+      }
+      let actor = null;
+      if (scene.frameAssetIds.length) {
+        actor = document.createElement('img');
+        actor.className = 'actor'; actor.alt = '';
+        actor.style.mixBlendMode = scene.blendMode;
+        layoutBox(actor, layout.character, dims);
+        actor.src = sceneMedia(scene.frameAssetIds[0]);
+        root.append(actor);
+      }
+      const copy = document.createElement('div');
+      copy.className = 'copy';
+      layoutBox(copy, layout.text, dims, false);
+      copy.style.maxHeight = `calc(${100 - layout.text.y / dims.height * 100}% - 4vh)`;
+      const title = document.createElement('h1'); title.textContent = scene.title;
+      const body = document.createElement('p'); body.textContent = scene.body;
+      copy.append(title, body);
+      root.append(copy);
+      return {root,actor,copy,scene,lastFrame:-1,textVisible:false};
+    }
+    function draw(view, elapsed) {
+      if (!view) return;
+      const {scene,actor,copy} = view;
+      if (actor) {
+        const frame = elapsed < scene.characterStartMs ? 0 : clamp(Math.floor((elapsed - scene.characterStartMs) * scene.fps / 1000), 0, scene.frameAssetIds.length - 1);
+        if (frame !== view.lastFrame) {
+          const path = sceneMedia(scene.frameAssetIds[frame]);
+          const cached = imageCache.get(path);
+          if (path && cached?.complete && cached.naturalWidth > 0) {
+            actor.src = path;
+            view.lastFrame = frame;
+          }
+        }
+      }
+      if (!view.textVisible && elapsed >= scene.textStartMs) {
+        copy.classList.add('visible');
+        view.textVisible = true;
+      }
+    }
+    function maskFor(scene, progress) {
+      const p = clamp(progress, 0, 1);
+      const t = scene.transition;
+      if (t.preset === 'circle') {
+        const x = innerWidth * t.originX / 100;
+        const y = innerHeight * t.originY / 100;
+        const radius = Math.max(Math.hypot(x,y),Math.hypot(innerWidth-x,y),Math.hypot(x,innerHeight-y),Math.hypot(innerWidth-x,innerHeight-y)) * p;
+        return {clipPath:`circle(${radius}px at ${x}px ${y}px)`};
+      }
+      if (t.preset === 'wave') {
+        const y0 = 1020 - p * 1300;
+        const y3 = 1250 - p * 1530;
+        const path = `M0 1000 L0 ${y0} C260 ${y0-55} 520 ${y0+35} 760 ${y3-65} C880 ${y3-36} 940 ${y3-10} 1000 ${y3} L1000 1000 Z`;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" preserveAspectRatio="none"><path fill="white" d="${path}"/></svg>`;
+        const mask = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+        return {maskImage:mask,WebkitMaskImage:mask,maskSize:'100% 100%',WebkitMaskSize:'100% 100%'};
+      }
+      if (t.preset === 'fade') return {opacity:p};
+      const sign = t.direction === 'left' || t.direction === 'up' ? 1 : -1;
+      const dx = t.direction === 'left' || t.direction === 'right' ? sign * (1-p)*100 : 0;
+      const dy = t.direction === 'up' || t.direction === 'down' ? sign * (1-p)*100 : 0;
+      return {transform:`translate(${dx}%,${dy}%)`};
+    }
+    function updateHint() {
+      const hidden = !!transition || index >= project.scenes.length - 1;
+      hint.classList.toggle('hidden', hidden);
+      hint.setAttribute('aria-hidden', String(hidden));
+      hint.style.setProperty('--hint-color', project.theme.ink);
+    }
+    function navigate(delta) {
+      const next = index + delta;
+      const now = performance.now();
+      if (transition || now < busyUntil || next < 0 || next >= project.scenes.length) return;
+      preloadScene(next);
+      incoming = createScene(next);
+      incoming.root.classList.add('incoming');
+      stage.append(incoming.root);
+      transition = {from:index,to:next,started:now,duration:reduceMotion.matches ? 1 : project.scenes[next].transition.durationMs};
+      busyUntil = now + transition.duration + 320;
+      updateHint();
+    }
+    function canScrollText(target, direction) {
+      const box = target instanceof Element ? target.closest('.copy') : null;
+      if (!box || box.scrollHeight <= box.clientHeight + 2) return false;
+      return direction > 0 ? box.scrollTop + box.clientHeight < box.scrollHeight - 2 : box.scrollTop > 2;
+    }
+    window.addEventListener('wheel', event => {
+      const direction = event.deltaY > 0 ? 1 : -1;
+      if (Math.abs(event.deltaY) < 3 || canScrollText(event.target,direction)) return;
+      event.preventDefault(); navigate(direction);
+    }, {passive:false});
+    window.addEventListener('touchstart', event => { touchY = event.touches[0]?.clientY ?? null; }, {passive:true});
+    window.addEventListener('touchend', event => {
+      if (touchY === null) return;
+      const diff = touchY - (event.changedTouches[0]?.clientY ?? touchY);
+      touchY = null;
+      if (Math.abs(diff) < 45 || canScrollText(event.target,Math.sign(diff))) return;
+      navigate(diff > 0 ? 1 : -1);
+    }, {passive:true});
+    window.addEventListener('keydown', event => {
+      if (['ArrowDown','PageDown',' '].includes(event.key)) {event.preventDefault();navigate(1)}
+      if (['ArrowUp','PageUp'].includes(event.key)) {event.preventDefault();navigate(-1)}
+    });
+    window.addEventListener('resize', () => {
+      const replacement = createScene(index);
+      active.root.replaceWith(replacement.root);
+      active = replacement;
+      if (incoming && transition) {
+        const other = createScene(transition.to);
+        incoming.root.replaceWith(other.root);
+        incoming = other;
+      }
+    });
+    function tick(now) {
+      draw(active,now-startTime);
+      if (transition && incoming) {
+        const p = clamp((now-transition.started)/transition.duration,0,1);
+        Object.assign(incoming.root.style,maskFor(incoming.scene,p));
+        draw(incoming,now-transition.started);
+        if (p >= 1) {
+          active.root.remove();
+          active = incoming; incoming = null;
+          index = transition.to;
+          startTime = transition.started;
+          active.root.classList.remove('incoming');
+          active.root.style.clipPath = '';
+          active.root.style.maskImage = '';
+          active.root.style.WebkitMaskImage = '';
+          active.root.style.opacity = '';
+          active.root.style.transform = '';
+          transition = null;
+          preloadScene(index+1);
+          updateHint();
+        }
+      }
+      requestAnimationFrame(tick);
+    }
+    active = createScene(0);
+    stage.append(active.root);
+    preloadScene(0);
+    preloadScene(1);
+    updateHint();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+</body>
+</html>

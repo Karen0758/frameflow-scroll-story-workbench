@@ -15,6 +15,8 @@ npm run dev
 
 打开终端显示的地址，通常是 `http://127.0.0.1:5173/`。也可以在页面中选择「导入项目包」，打开 [`templates/starter.frameflow`](templates/starter.frameflow)。
 
+想先看交付文件的样子，可下载 [三屏示例网页 ZIP](examples/demo-website.zip)，解压后按其中的 `README.txt` 预览。示例只有占位文字和配色；请在工作台导入自己的素材，再导出自己的网页。
+
 ## 你能做什么
 
 - 增加、复制、删除、调整场景顺序；编辑每屏标题、正文、底色及统一的字体气质。
@@ -22,15 +24,16 @@ npm run dev
 - 上传已去背的同尺寸人物帧、背景纹理；或从视频中选择时段，在浏览器内抽取固定尺寸 WebP 帧（最多 120 张）。
 - 在画布中拖动人物和文字；电脑、手机使用独立位置与尺寸。预览按钮、滚轮和滑动切页。
 - 将配置和媒体一起导出成 `.frameflow` 文件，日后在同一浏览器或另一台电脑导入继续编辑。
+- 导出独立网页 ZIP，解压后得到 `index.html`、`assets/` 和说明文件；网页可用滚轮、触摸上下滑和键盘切页，右下角显示“继续下滑”。
 
 详细操作、素材准备、常见问题见 [使用说明书](docs/USER_GUIDE.md)。从零规划内容可用 [新项目表](templates/NEW_PROJECT_BRIEF.md) 和 [制作流程](docs/PROCESS_TEMPLATE.md)。
 
 ## 轻量 Skill
 
-仓库内的 [`skills/frameflow/SKILL.md`](skills/frameflow/SKILL.md) 可让 Codex 按同一流程协助准备视频帧、搭建场景、检查头脚和影子，并交付可编辑项目包。安装方式见 [使用说明书的 Skill 一节](docs/USER_GUIDE.md#6-使用-skill)。
+仓库内的 [`skills/frameflow/SKILL.md`](skills/frameflow/SKILL.md) 可让 Codex 按同一流程协助准备视频帧、搭建场景、检查头脚和影子，并交付可编辑项目包及静态网页。安装方式见 [使用说明书的 Skill 一节](docs/USER_GUIDE.md#7-使用-skill)。
 
 ## 当前边界
 
-Frameflow v0.1 是**本地编辑器和交互预览**。`npm run build` 构建的是工作台，不会导出最终可部署的叙事网站。视频抽帧只统一输出画幅，不会自动去背、修复缺失的头脚、校正镜头缩放或重建阴影。需要正片叠底的独立人物，应先准备透明帧。工作台无账户同步；素材保存在当前浏览器，记得定期导出项目包。
+`.frameflow` 是**可编辑项目包**，不能直接作为网页打开；「导出网页 ZIP」才是可交付的静态网页。ZIP 内的 `index.html` 和 `assets/` 要一起部署。`npm run build` 构建的是工作台本身。视频抽帧只统一输出画幅，不会自动去背、修复缺失的头脚、校正镜头缩放或重建阴影。需要正片叠底的独立人物，应先准备透明帧。工作台无账户同步；素材保存在当前浏览器，记得定期导出项目包。
 
 本仓库不含用户视频、人物或私有网站素材。代码按 [MIT License](LICENSE) 使用；你上传的素材仍由素材权利人决定使用范围。

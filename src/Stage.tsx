@@ -147,6 +147,7 @@ export default function Stage({ project, selectedId, device, urls, playing, scru
         <SceneView scene={toScene} project={project} device={device} urls={urls} timeMs={previewTime} editable={false} />
       </div>}
       {playing && <div className="preview-controls"><button aria-label="上一页" onClick={() => go(-1)} disabled={sceneIndex === 0 || !!transition}>↑</button><span>{sceneIndex + 1} / {project.scenes.length}</span><button aria-label="下一页" onClick={() => go(1)} disabled={sceneIndex === project.scenes.length - 1 || !!transition}>↓</button></div>}
+      {playing && !transition && sceneIndex < project.scenes.length - 1 && <div className="stage-scroll-hint" aria-label="继续下滑"><span>继续下滑</span><svg viewBox="0 0 24 32" aria-hidden="true"><path d="M12 2v25M4 19l8 8 8-8" /></svg></div>}
     </div>
   </div>;
 }
